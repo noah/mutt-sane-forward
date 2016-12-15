@@ -1,5 +1,7 @@
 # About
 
+**Note: this is beta software.  It may shoot your dog.**
+
 By default, [mutt](http://www.mutt.org/doc/manual/) does not come with
 sane email forwarding.  As of the end of 2016, most people I know in my
 personal and professional lives expect forwarded email mail to contain:
@@ -55,11 +57,21 @@ bloody hack that happens to work extremely well.
 
 # Dependencies
 
-    - zsh
-    - [pcre](https://www.archlinux.org/packages/core/i686/pcre/files/)
-      is needed, or you can rewrite my multiline regexes in sed :(
-    - [munpack](https://aur.archlinux.org/packages/mpack/) is needed as
-      the code is currently written, but conceiveably another attachment
-      extraction tool, e.g.
-      [ripmime](http://www.pldaniels.com/ripmime/), could be rather
-      trivially substituted.
+* zsh
+* [pcre](https://www.archlinux.org/packages/core/i686/pcre/files/) is
+  needed, or you can rewrite my multiline regexes in sed :(
+* [munpack](https://aur.archlinux.org/packages/mpack/) is needed as the
+  code is currently written, but conceiveably another attachment
+  extraction tool, e.g.  [ripmime](http://www.pldaniels.com/ripmime/),
+  could be rather trivially substituted.
+
+# Installation
+
+Add the following to your `.muttrc`:
+
+        macro pager,index f '<pipe-message>/path/to/mutt-sane-forward<enter>' 'sanely forward an email'
+
+
+# License
+
+GPLv3; patches welcome.
