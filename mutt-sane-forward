@@ -1,0 +1,108 @@
+#!/usr/bin/env zsh
+
+clear
+
+######## Create some temporary locations
+_tmpdir="/tmp/$(basename $0)"
+mkdir -p $_tmpdir 2> /dev/null
+_tmpf="$(mktemp --tmpdir=$_tmpdir)"
+_tmpd="$(mktemp --tmpdir=$_tmpdir -d)"
+
+######## Fudge file descriptors
+#
+# Capture the contents of STDIN -- we will need that later
+> $_tmpf
+#
+# This script is called from a pseudo-terminal (using mutt's
+# <pipe-message>). As such, it will not have access to terminal file
+# descriptors.  But those are necessary for curses (and thusly,
+# interactive mutt).  I.e., mutt will not actually run in interactive
+# mode without access to STDIN.  It will just run non-interactively,
+# which means sending the message without giving the user a chance to
+# first edit the forward message (which we want).  To get mutt to run in
+# interactive mode, it is necessary to attach terminal STDIN to the
+# script.
+exec 0<&-       # close STDIN
+exec 0</dev/tty   # reattach terminal STDIN
+
+
+######## Extract headers 
+#
+headers=$(sed '/^$/q' "$_tmpf")
+#
+# In the above, /PATTERN/q matches everything up to PATTERN
+# So, everything up to the first CRLF in the file is a header 
+# (See https://tools.ietf.org/html/rfc2822#section-2.2)
+#
+#
+# given arbitrary headers, returns:
+#   header "subject"    ->  "Hello World!"
+#   header "subject" 1  ->  "Subject: Hello World!"
+header()
+{
+        key="$1"
+
+        # match header (incl. multi-line)
+        h=$(echo "$headers" | pcregrep --ignore-case --multiline "^$key:.+\n(\s+.*)?")
+
+        if [ -z ${2+x} ]; then # remove header key
+                h="$(echo "$h" | sed "s/$key:\s*//i")"
+        fi
+
+        if [ -z "$h" ]; then
+                # key is empty
+                echo "$key:"
+        else
+                # remove linebreaks
+                echo "$h" | tr -d "\n\r"
+        fi
+
+}
+
+quote() # prefix quote forwarded messages
+{
+        key="$1"
+        prefix='> '
+        echo "$key" | sed -e "s/^/$prefix/"
+}
+
+######## Create the forward message
+#
+#
+# unpacks the message parts into a directory
+munpack -t -q -f -C "$_tmpd" 2>&1 >/dev/null < $_tmpf
+
+fwd_message="$(cat $_tmpd/*.desc)"
+fwd_message="$fwd_message
+$(cat $_tmpd/part1)"
+
+cat <<EOF > $_tmpf
+----- Forwarded message from $(header From) -----
+
+$(quote "$(header Date 1)")
+$(quote "$(header From 1)")
+$(quote "$(header To 1)")
+$(quote "$(header CC 1)")
+$(quote "$(header Subject 1)")
+$(quote "$(header Message-ID 1)")
+$(quote "$(header X-Mailer 1)")
+$(quote "$(header Thread-Topic 1)")
+$(quote "$(header Thread-Index 1)")
+$(quote)
+$(quote "$fwd_message")
+$(quote)
+----- End forwarded message -----
+EOF
+
+# remove description files and first part1 (inline text)
+rm -fv $_tmpd/*.desc
+rm -fv $_tmpd/part1
+
+# open the message in mutt
+#
+mutt -E -H "$_tmpf" -s "Fwd: $(header Subject)" -a $_tmpd/*
+
+
+######## Clean up temporary locations
+rm -Rfv $_tmpf
+rm -Rfv $_tmpd
