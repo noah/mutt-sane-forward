@@ -1,0 +1,6 @@
+/CC:(\s+.+\n?)+/im
+CC: "Some One" <someone@example.com>,
+        "Else, Somebody Q."
+	<Somebody.Else@example.com>,
+        "Yet, Another" <Anotyer.Yet@example.com>
+CC: "Boo Radley" <boo@example.com>,
