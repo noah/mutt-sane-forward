@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 
+#
 clear
+setopt +o nomatch
 
 ######## Create some temporary locations
 _tmpdir="/tmp/$(basename $0)"
@@ -43,7 +45,8 @@ header()
         key="$1"
 
         # match header (incl. multi-line)
-        h=$(echo "$headers" | pcregrep --ignore-case --multiline "^$key:.+\n(\s+.*)?")
+        h=$(echo "$headers" | pcregrep --ignore-case --multiline\
+                "^$key:(\s+.+\n?)+")
 
         if [ -z ${2+x} ]; then # remove header key
                 h="$(echo "$h" | sed "s/$key:\s*//i")"
@@ -70,11 +73,13 @@ quote() # prefix quote forwarded messages
 #
 #
 # unpacks the message parts into a directory
+
+command -v munpack 2>&1 >/dev/null || {
+        echo "munpack not found. Exiting"; exit -1
+}
 munpack -t -q -f -C "$_tmpd" 2>&1 >/dev/null < $_tmpf
 
-fwd_message="$(cat $_tmpd/*.desc)"
-fwd_message="$fwd_message
-$(cat $_tmpd/part1)"
+fwd_message="$(cat $_tmpd/(*.desc|part1) 2>/dev/null)"
 
 cat <<EOF > $_tmpf
 ----- Forwarded message from $(header From) -----
@@ -104,5 +109,5 @@ mutt -E -H "$_tmpf" -s "Fwd: $(header Subject)" -a $_tmpd/*
 
 
 ######## Clean up temporary locations
-rm -Rfv $_tmpf
-rm -Rfv $_tmpd
+rm -f $_tmpf
+rm -Rf $_tmpd
