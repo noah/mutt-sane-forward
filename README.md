@@ -70,6 +70,7 @@ bloody hack that happens to work extremely well.
 Add the following to your `.muttrc`:
 
         macro pager,index f '<pipe-message>/path/to/mutt-sane-forward<enter>' 'sanely forward an email'
+        set pipe_decode=no
 
 
 # License
